@@ -1,0 +1,4 @@
+cmake-build/
+subprojects/
+*.swp
+*.orig
