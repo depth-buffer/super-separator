@@ -26,6 +26,7 @@ target_compile_definitions(supsep PUBLIC
     # version of this plugin to be backwards compatible with, disable backwards
 	# compatibility options so we can build VST3 without requiring the VST2 SDK
 	JUCE_VST3_CAN_REPLACE_VST2=0
+	$<$<CONFIG:Debug>:SUPSEP_LOGGING=1>
 )
 target_link_libraries(supsep PUBLIC
 	juce::juce_recommended_warning_flags
@@ -34,5 +35,6 @@ target_link_libraries(supsep PUBLIC
 )
 target_link_libraries(supsep PRIVATE
 	juce::juce_audio_plugin_client
+	juce::juce_dsp
 )
 juce_generate_juce_header(supsep)

@@ -1,13 +1,13 @@
 #pragma once
 
+#include <JuceHeader.h>
+
+#include <memory>
+
 class SuperSeparator : public juce::AudioProcessor
 {
 	public:
-		SuperSeparator() : juce::AudioProcessor(
-				BusesProperties().withInput("Input",
-					juce::AudioChannelSet::stereo())
-				.withOutput ("Output", juce::AudioChannelSet::stereo()))
-		{}
+		SuperSeparator();
 
 		//
 		// Constants
@@ -39,23 +39,22 @@ class SuperSeparator : public juce::AudioProcessor
 			return false;
 		}
 
+		bool supportsDoublePrecisionProcessing() const override
+		{
+			return true;
+		}
+
 		//
 		// Setup & processing
 		//
 
-		// TODO
 		void prepareToPlay(double sampleRate,
-				int maximumExpectedSamplesPerBlock) override
-		{}
-
-		// TODO
-		void releaseResources() override
-		{}
-
-		// TODO
+				int maximumExpectedSamplesPerBlock) override;
+		void releaseResources() override;
 		void processBlock(juce::AudioBuffer<float> & buffer,
-				juce::MidiBuffer & midiMessages) override
-		{}
+				juce::MidiBuffer &) override;
+		void processBlock(juce::AudioBuffer<double> & buffer,
+				juce::MidiBuffer &) override;
 
 		//
 		// GUI
@@ -106,6 +105,32 @@ class SuperSeparator : public juce::AudioProcessor
 		void setStateInformation(void const * data, int size) override
 		{}
 
+#ifdef SUPSEP_LOGGING
+		void debugLog(juce::String const & msg, bool reset = true);
+#endif
+
 	private:
 	    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SuperSeparator)
+
+#ifdef SUPSEP_LOGGING
+		std::unique_ptr<juce::FileLogger> m_logger;
+		bool m_firstLog;
+#endif
+
+		double m_sampleRate;
+		int m_mainInvert;
+		int m_sideInvert;
+
+		juce::dsp::DelayLine<float,
+			juce::dsp::DelayLineInterpolationTypes::Linear> m_floatDelayLine;
+		juce::dsp::DelayLine<double,
+			juce::dsp::DelayLineInterpolationTypes::Linear> m_doubleDelayLine;
+
+		juce::AudioParameterInt * m_paramDelay;
+		juce::AudioParameterChoice * m_paramInvert;
+
+		template<typename SampleType, typename DelayType> void processBlock(
+				juce::AudioBuffer<SampleType> & buffer, DelayType & delayLine);
+
+		juce::String delayString(int value, int maxlen) const;
 };
