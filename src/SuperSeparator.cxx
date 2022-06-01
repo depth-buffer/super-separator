@@ -174,8 +174,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	// might be bigger than maximumExpectedSamplesPerBlock.
 	// Check whether DelayLine handles this natively or just barfs - if the
 	// latter, we will need to chop up blocks here before passing them in.
-		m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
-		m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
+	m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
 
 	if (m_paramInvert->getIndex() == 0)
 	{
