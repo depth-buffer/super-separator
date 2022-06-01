@@ -20,13 +20,12 @@ namespace
 	class DelayParam : public juce::AudioParameterInt
 	{
 		public:
-			DelayParam(SuperSeparator * proc, juce::String const & parameterID,
-					juce::String const & parameterName, int minValue,
-					int maxValue, int defaultValue,
-					juce::String const & parameterLabel)
-				: juce::AudioParameterInt(parameterID, parameterName, minValue,
-						maxValue, defaultValue, parameterLabel), m_proc(proc)
-			{}
+			using juce::AudioParameterInt::AudioParameterInt;
+
+			void setAudioProcessor(SuperSeparator * proc)
+			{
+				m_proc = proc;
+			}
 
 			bool isDiscrete() const override
 			{
@@ -34,12 +33,35 @@ namespace
 			}
 
 		private:
-			SuperSeparator * m_proc;
+			SuperSeparator * m_proc = nullptr;
 
 			void valueChanged(int newValue) override
 			{
 #ifdef SUPSEP_LOGGING
-				juce::String d("valueChanged: ");
+				juce::String d("delay param valueChanged: ");
+				d += newValue;
+				m_proc->debugLog(d);
+#endif
+			}
+	};
+
+	class InvertParam : public juce::AudioParameterChoice
+	{
+		public:
+			using juce::AudioParameterChoice::AudioParameterChoice;
+
+			void setAudioProcessor(SuperSeparator * proc)
+			{
+				m_proc = proc;
+			}
+
+		private:
+			SuperSeparator * m_proc = nullptr;
+
+			void valueChanged(int newValue) override
+			{
+#ifdef SUPSEP_LOGGING
+				juce::String d("invert param valueChanged: ");
 				d += newValue;
 				m_proc->debugLog(d);
 #endif
@@ -72,14 +94,17 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	m_floatDelayLine(5760), m_doubleDelayLine(5760),
 	// 5760 = 15 * 384, i.e. enough samples to go up to 15ms delay at
 	// 384kHz. Should be enough for anyone, right...?
-	m_paramDelay(new DelayParam(this, "delay", "Delay", 0, 5760, 1,
+	m_paramDelay(new DelayParam("delay", "Delay", 0, 5760, 1,
 				"samples")),
-	m_paramInvert(new juce::AudioParameterChoice("invert", "Invert",
-				{"Primary", "Secondary"}, 0))
+	m_paramInvert(new InvertParam("invert", "Invert", {"Primary", "Secondary"},
+				0))
 {
-	// TODO: Parameters
+	dynamic_cast<DelayParam *>(m_paramDelay)->setAudioProcessor(this);
+	dynamic_cast<InvertParam *>(m_paramInvert)->setAudioProcessor(this);
+
+	// TODO: Future parameters?
 	// Per-channel delay gain
-	// Dry/wet
+	// Dry/wet (instance-linked)
 
 	// TODO If multi-instance linking does indeed work out:
 	// Delay times linked
@@ -87,6 +112,10 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	// Dry/wet linked
 	addParameter(m_paramDelay);
 	addParameter(m_paramInvert);
+
+#ifdef SUPSEP_LOGGING
+	debugLog(juce::String("Instance UUID: ") + m_uuid.toDashedString());
+#endif
 }
 
 //
@@ -241,4 +270,76 @@ void SuperSeparator::processBlock(juce::AudioBuffer<double> & buffer,
 	debugLog(d, false);
 #endif
 	processBlock(buffer, m_doubleDelayLine);
+}
+
+//
+// State loading & saving
+//
+
+void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
+{
+	// Create an XML document describing the current parameter values,
+	// serialise it to a string, then chuck it in the destination memory block
+	juce::XmlElement settings("settings");
+
+	// Settings version. Bump this if non-backwards-compatible changes are
+	// ever made.
+	settings.setAttribute("version", 1);
+
+	// Delay time
+	std::unique_ptr<juce::XmlElement> delay{new juce::XmlElement("delay")};
+	delay->setAttribute("time", m_paramDelay->get());
+	settings.addChildElement(delay.release());
+
+	// Input inversion
+	std::unique_ptr<juce::XmlElement> invert{new juce::XmlElement("invert")};
+	invert->setAttribute("channel", m_paramInvert->getIndex());
+	settings.addChildElement(invert.release());
+
+	// Serialise & copy to memory block
+	copyXmlToBinary(settings, destData);
+
+#ifdef SUPSEP_LOGGING
+	debugLog(juce::String("getStateInformation:\n---\n") + settings.toString()
+			+ juce::String("---"));
+#endif
+}
+
+void SuperSeparator::setStateInformation(void const * data, int size)
+{
+	// Decode string to XML
+	std::unique_ptr<juce::XmlElement> settings{getXmlFromBinary(data, size)};
+
+#ifdef SUPSEP_LOGGING
+	debugLog(juce::String("setStateInformation:\n---\n") + settings->toString()
+			+ juce::String("---"));
+#endif
+
+	// Check settings version. If unsupported, just leave everything at default
+	if (settings->getIntAttribute("version") != 1)
+	{
+#ifdef SUPSEP_LOGGING
+		juce::String d("Unsupported settings version: ");
+		d += settings->getIntAttribute("version");
+		debugLog(d);
+#endif
+		return;
+	}
+
+	// Read settings & set parameter values. Leave unchanged at current values
+	// if attributes are for some reason not present, but this shouldn't
+	// happen.
+	for (auto * e : settings->getChildIterator())
+	{
+		if (e->getTagName() == "delay")
+		{
+			int v = e->getIntAttribute("time", m_paramDelay->get());
+			*m_paramDelay = v;
+		}
+		else if (e->getTagName() == "invert")
+		{
+			int v = e->getIntAttribute("channel", m_paramInvert->getIndex());
+			*m_paramInvert = v;
+		}
+	}
 }

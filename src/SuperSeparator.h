@@ -113,12 +113,12 @@ class SuperSeparator : public juce::AudioProcessor
 		//
 
 		// TODO
-		void getStateInformation(juce::MemoryBlock & destData) override
-		{}
+		void getStateInformation(juce::MemoryBlock & destData) override;
+		void setStateInformation(void const * data, int size) override;
 
-		// TODO
-		void setStateInformation(void const * data, int size) override
-		{}
+		//
+		// Debugging
+		//
 
 #ifdef SUPSEP_LOGGING
 		void debugLog(juce::String const & msg, bool reset = true);
@@ -135,6 +135,7 @@ class SuperSeparator : public juce::AudioProcessor
 		double m_sampleRate;
 		int m_mainInvert;
 		int m_sideInvert;
+		juce::Uuid m_uuid;
 
 		juce::dsp::DelayLine<float,
 			juce::dsp::DelayLineInterpolationTypes::Linear> m_floatDelayLine;
