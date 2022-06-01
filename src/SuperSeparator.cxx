@@ -174,6 +174,8 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	// might be bigger than maximumExpectedSamplesPerBlock.
 	// Check whether DelayLine handles this natively or just barfs - if the
 	// latter, we will need to chop up blocks here before passing them in.
+
+	// Apply settings
 	m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
 
 	if (m_paramInvert->getIndex() == 0)
@@ -181,12 +183,13 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 		m_mainInvert = 1;
 		m_sideInvert = -1;
 	}
-	if (m_paramInvert->getIndex() == 1)
+	else
 	{
 		m_mainInvert = -1;
 		m_sideInvert = 1;
 	}
 
+	// Grab input & output data pointers
 	auto main = getBusBuffer(buffer, true, 0);
 	auto side = getBusBuffer(buffer, true, 1);
 
@@ -194,6 +197,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	SampleType const ** pside = side.getArrayOfReadPointers();
 	SampleType ** dst = main.getArrayOfWritePointers();
 
+	// Main processing
 	for (int i = 0; i < buffer.getNumSamples(); ++i)
 	{
 		for (int j = 0; j < main.getNumChannels(); ++j)
