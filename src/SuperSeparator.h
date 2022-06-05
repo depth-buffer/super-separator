@@ -134,7 +134,6 @@ class SuperSeparator : public juce::AudioProcessor
 		bool m_firstLog;
 #endif
 
-		double m_sampleRate;
 		int m_mainInvert;
 		int m_sideInvert;
 		juce::Uuid m_uuid;
@@ -149,6 +148,4 @@ class SuperSeparator : public juce::AudioProcessor
 
 		template<typename SampleType, typename DelayType> void processBlock(
 				juce::AudioBuffer<SampleType> & buffer, DelayType & delayLine);
-
-		juce::String delayString(int value, int maxlen) const;
 };

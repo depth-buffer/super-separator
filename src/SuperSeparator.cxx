@@ -95,7 +95,7 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 					+ ProjectInfo::versionString)),
 	m_firstLog(true),
 #endif
-	m_sampleRate(44100), m_mainInvert(1), m_sideInvert(-1),
+	m_mainInvert(1), m_sideInvert(-1),
 	m_floatDelayLine(5760), m_doubleDelayLine(5760),
 	// 5760 = 15 * 384, i.e. enough samples to go up to 15ms delay at
 	// 384kHz. Should be enough for anyone, right...?
@@ -153,14 +153,6 @@ void SuperSeparator::debugLog(juce::String const & msg, bool reset)
 }
 #endif
 
-juce::String SuperSeparator::delayString(int value, int maxlen) const
-{
-	double ms = static_cast<double>(value) / (m_sampleRate / 1000.0);
-	juce::String str(ms);
-	str += " milliseconds";
-	return str.substring(0, maxlen);
-}
-
 //
 // Setup & processing
 //
@@ -172,8 +164,6 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 	debugLog(juce::String("prepareToPlay: ") + juce::String(sampleRate) + ' '
 			+ juce::String(maximumExpectedSamplesPerBlock));
 #endif
-
-	m_sampleRate = sampleRate;
 
 	juce::dsp::ProcessSpec spec {sampleRate,
 		static_cast<uint32_t>(maximumExpectedSamplesPerBlock), 4};
