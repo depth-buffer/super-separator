@@ -69,6 +69,10 @@ namespace
 	};
 }
 
+//
+// Constructor & destructor
+//
+
 // JUCE framework entry point - construct new instance of the plugin
 juce::AudioProcessor * JUCE_CALLTYPE createPluginFilter()
 {
@@ -87,7 +91,8 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 				juce::String(ProjectInfo::versionString).replace(".","_")
 					+ '-',
 				".txt",
-				juce::String("Hello, world! ") + ProjectInfo::versionString)),
+				juce::String(ProjectInfo::projectName) + ' '
+					+ ProjectInfo::versionString)),
 	m_firstLog(true),
 #endif
 	m_sampleRate(44100), m_mainInvert(1), m_sideInvert(-1),
@@ -99,6 +104,10 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	m_paramInvert(new InvertParam("invert", "Invert", {"Primary", "Secondary"},
 				0))
 {
+#ifdef SUPSEP_LOGGING
+	juce::Logger::setCurrentLogger(m_logger.get());
+#endif
+
 	dynamic_cast<DelayParam *>(m_paramDelay)->setAudioProcessor(this);
 	dynamic_cast<InvertParam *>(m_paramInvert)->setAudioProcessor(this);
 
@@ -115,6 +124,13 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 
 #ifdef SUPSEP_LOGGING
 	debugLog(juce::String("Instance UUID: ") + m_uuid.toDashedString());
+#endif
+}
+
+SuperSeparator::~SuperSeparator()
+{
+#ifdef SUPSEP_LOGGING
+	juce::Logger::setCurrentLogger(nullptr);
 #endif
 }
 

@@ -19,10 +19,12 @@
 
 #include <memory>
 
+// Main plugin instance "entry point" class & audio processing callbacks
 class SuperSeparator : public juce::AudioProcessor
 {
 	public:
 		SuperSeparator();
+		~SuperSeparator() override;
 
 		//
 		// Constants
