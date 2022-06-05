@@ -95,7 +95,6 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 					+ ProjectInfo::versionString)),
 	m_firstLog(true),
 #endif
-	m_mainInvert(1), m_sideInvert(-1),
 	m_floatDelayLine(5760), m_doubleDelayLine(5760),
 	// 5760 = 15 * 384, i.e. enough samples to go up to 15ms delay at
 	// 384kHz. Should be enough for anyone, right...?
@@ -178,17 +177,6 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 		m_doubleDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
 		m_doubleDelayLine.prepare(spec);
 	}
-
-	if (m_paramInvert->getIndex() == 0)
-	{
-		m_mainInvert = 1;
-		m_sideInvert = -1;
-	}
-	if (m_paramInvert->getIndex() == 1)
-	{
-		m_mainInvert = -1;
-		m_sideInvert = 1;
-	}
 }
 
 void SuperSeparator::releaseResources()
@@ -213,15 +201,12 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	// Apply settings
 	m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
 
-	if (m_paramInvert->getIndex() == 0)
+	SampleType mainInputCoeff = -1;
+	SampleType sideInputCoeff = 1;
+	if (m_paramInvert->getIndex() == 1)
 	{
-		m_mainInvert = 1;
-		m_sideInvert = -1;
-	}
-	else
-	{
-		m_mainInvert = -1;
-		m_sideInvert = 1;
+		mainInputCoeff = 1;
+		sideInputCoeff = -1;
 	}
 
 	// Grab input & output data pointers
@@ -237,8 +222,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	{
 		for (int j = 0; j < main.getNumChannels(); ++j)
 		{
-			delayLine.pushSample(j, pmain[j][i]
-					* static_cast<SampleType>(m_mainInvert));
+			delayLine.pushSample(j, pmain[j][i] * mainInputCoeff);
 			dst[j][i] = delayLine.popSample(j) + pmain[j][i];
 		}
 	}
@@ -247,8 +231,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	{
 		for (int j = 0; j < side.getNumChannels(); ++j)
 		{
-			delayLine.pushSample(j + 2, pside[j][i]
-					* static_cast<SampleType>(m_sideInvert));
+			delayLine.pushSample(j + 2, pside[j][i] * sideInputCoeff);
 			dst[j][i] += delayLine.popSample(j + 2) + pside[j][i];
 		}
 	}

@@ -134,8 +134,6 @@ class SuperSeparator : public juce::AudioProcessor
 		bool m_firstLog;
 #endif
 
-		int m_mainInvert;
-		int m_sideInvert;
 		juce::Uuid m_uuid;
 
 		juce::dsp::DelayLine<float,
