@@ -13,7 +13,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#ifdef SUPSEP_LOGGING
+#include <sstream>
+#endif
+
 #include "Editor.h"
+#include "InstanceManager.h"
 #include "SuperSeparator.h"
 
 namespace
@@ -102,6 +107,9 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 
 #ifdef SUPSEP_LOGGING
 	debugLog(juce::String("Instance UUID: ") + m_uuid.toDashedString());
+	std::ostringstream oss;
+	oss << "Instance manager: " << std::ios::hex << InstanceManager::get();
+	debugLog(oss.str());
 #endif
 }
 
