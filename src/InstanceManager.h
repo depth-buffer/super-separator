@@ -46,6 +46,20 @@ class InstanceManager
 				RemoteSuperSeparator * interface);
 		void unregisterInstance(std::string const & name);
 
+		// TODO I don't know for certain that some VST hosts don't have
+		// multiple GUI and audio threads, so all communication between
+		// instances should be done with the manager lock held (shouldn't be
+		// a performance problem as it's really not intended to have its
+		// parameters tweaked except when scanning for good delay values).
+		// To that end, we need:
+		// - a scoped instance manager lock guard (and method for creating one)
+		// - the instance manager to (with lock held) null out the follower
+		//   pointer in the leader when an instance with leader unregisters
+		// - leaders to check (with lock held) validity of follower pointer
+		//   before calling any methods on it, so we don't crash if another
+		//   thread destroys a follower during manipulation
+		// - the processor destructor to take the manager lock
+
 	private:
 		InstanceManager() = default;
 		~InstanceManager() = default;

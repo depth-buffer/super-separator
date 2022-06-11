@@ -272,6 +272,8 @@ void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
 	invert->setAttribute("channel", m_paramInvert->getIndex());
 	settings.addChildElement(invert.release());
 
+	// TODO Save instance UUID so leaders can find us, if we are a follower
+
 	// Serialise & copy to memory block
 	copyXmlToBinary(settings, destData);
 
@@ -317,6 +319,7 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 			int v = e->getIntAttribute("channel", m_paramInvert->getIndex());
 			*m_paramInvert = v;
 		}
+		// TODO Load instance UUID so leaders can find us, if we are a follower
 	}
 }
 
