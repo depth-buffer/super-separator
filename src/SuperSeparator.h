@@ -1,23 +1,26 @@
 // Copyright 2022 Philip Allison
-// 
+//
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful, but WITHOUT
 // ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 // FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 // more details.
-// 
+//
 // You should have received a copy of the GNU General Public License along
-// with this program. If not, see <https://www.gnu.org/licenses/>. 
+// with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include <memory>
+
 #include <JuceHeader.h>
 
-#include <memory>
+// Forward declaration of plugin editor UI
+class Editor;
 
 // Main plugin instance "entry point" class & audio processing callbacks
 class SuperSeparator : public juce::AudioProcessor
@@ -50,10 +53,9 @@ class SuperSeparator : public juce::AudioProcessor
 			return false;
 		}
 
-		// TODO
 		bool hasEditor() const override
 		{
-			return false;
+			return true;
 		}
 
 		bool supportsDoublePrecisionProcessing() const override
@@ -77,10 +79,27 @@ class SuperSeparator : public juce::AudioProcessor
 		// GUI
 		//
 
-		// TODO
-		juce::AudioProcessorEditor * createEditor() override
+		juce::AudioProcessorEditor * createEditor() override;
+
+		juce::AudioParameterInt & getParamDelay()
 		{
-			return nullptr;
+			return *m_paramDelay;
+		}
+
+		// TODO Instead of this, expose get/set value methods which abstract
+		// away the toggle between local & remote according to follower mode,
+		// so the Editor doesn't need to care
+		juce::AudioParameterChoice & getParamInvert()
+		{
+			return *m_paramInvert;
+		}
+
+		// TODO Instead of this, expose get/set value methods which abstract
+		// away the toggle between local & remote according to follower mode,
+		// so the Editor doesn't need to care
+		juce::ChangeBroadcaster & getChangeBroadcaster()
+		{
+			return m_changeBroadcaster;
 		}
 
 		//
@@ -143,6 +162,8 @@ class SuperSeparator : public juce::AudioProcessor
 
 		juce::AudioParameterInt * m_paramDelay;
 		juce::AudioParameterChoice * m_paramInvert;
+
+		juce::ChangeBroadcaster m_changeBroadcaster;
 
 		template<typename SampleType, typename DelayType> void processBlock(
 				juce::AudioBuffer<SampleType> & buffer, DelayType & delayLine);

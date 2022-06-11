@@ -1,70 +1,51 @@
 // Copyright 2022 Philip Allison
-// 
+//
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful, but WITHOUT
 // ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 // FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 // more details.
-// 
+//
 // You should have received a copy of the GNU General Public License along
-// with this program. If not, see <https://www.gnu.org/licenses/>. 
+// with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include "Editor.h"
 #include "SuperSeparator.h"
 
 namespace
 {
-	class DelayParam : public juce::AudioParameterInt
+	// Base class for parameters that send notifications to their owning
+	// SuperSeparator's embedded change broadcaster when altered
+	template<class ParamType>
+	class ChangeBroadcastedParam : public ParamType
 	{
 		public:
-			using juce::AudioParameterInt::AudioParameterInt;
-
-			void setAudioProcessor(SuperSeparator * proc)
-			{
-				m_proc = proc;
-			}
+			template<typename... Args>
+			ChangeBroadcastedParam(SuperSeparator * proc, Args... args)
+				: ParamType(args...), m_proc(proc)
+			{}
 
 			bool isDiscrete() const override
 			{
 				return true;
 			}
 
-		private:
-			SuperSeparator * m_proc = nullptr;
+		protected:
+			SuperSeparator * m_proc;
 
 			void valueChanged(int newValue) override
 			{
 #ifdef SUPSEP_LOGGING
-				juce::String d("delay param valueChanged: ");
+				juce::String d{ParamType::getParameterID()};
+				d += " param valueChanged: ";
 				d += newValue;
 				m_proc->debugLog(d);
 #endif
-			}
-	};
-
-	class InvertParam : public juce::AudioParameterChoice
-	{
-		public:
-			using juce::AudioParameterChoice::AudioParameterChoice;
-
-			void setAudioProcessor(SuperSeparator * proc)
-			{
-				m_proc = proc;
-			}
-
-		private:
-			SuperSeparator * m_proc = nullptr;
-
-			void valueChanged(int newValue) override
-			{
-#ifdef SUPSEP_LOGGING
-				juce::String d("invert param valueChanged: ");
-				d += newValue;
-				m_proc->debugLog(d);
-#endif
+				m_proc->getChangeBroadcaster().sendChangeMessage();
 			}
 	};
 }
@@ -98,17 +79,15 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	m_floatDelayLine(5760), m_doubleDelayLine(5760),
 	// 5760 = 15 * 384, i.e. enough samples to go up to 15ms delay at
 	// 384kHz. Should be enough for anyone, right...?
-	m_paramDelay(new DelayParam("delay", "Delay", 0, 5760, 1,
-				"samples")),
-	m_paramInvert(new InvertParam("invert", "Invert", {"Primary", "Secondary"},
-				0))
+	m_paramDelay(new ChangeBroadcastedParam<juce::AudioParameterInt>
+			(this, "delay", "Delay", 0, 5760, 1, "samples")),
+	m_paramInvert(new ChangeBroadcastedParam<juce::AudioParameterChoice>
+			(this, "invert", "Invert",
+			 juce::StringArray{"Secondary", "Primary"}, 0))
 {
 #ifdef SUPSEP_LOGGING
 	juce::Logger::setCurrentLogger(m_logger.get());
 #endif
-
-	dynamic_cast<DelayParam *>(m_paramDelay)->setAudioProcessor(this);
-	dynamic_cast<InvertParam *>(m_paramInvert)->setAudioProcessor(this);
 
 	// TODO: Future parameters?
 	// Per-channel delay gain
@@ -201,12 +180,12 @@ void SuperSeparator::processBlock(juce::AudioBuffer<SampleType> & buffer,
 	// Apply settings
 	m_floatDelayLine.setDelay(static_cast<float>(m_paramDelay->get()));
 
-	SampleType mainInputCoeff = -1;
-	SampleType sideInputCoeff = 1;
+	SampleType mainInputCoeff = 1;
+	SampleType sideInputCoeff = -1;
 	if (m_paramInvert->getIndex() == 1)
 	{
-		mainInputCoeff = 1;
-		sideInputCoeff = -1;
+		mainInputCoeff = -1;
+		sideInputCoeff = 1;
 	}
 
 	// Grab input & output data pointers
@@ -331,4 +310,13 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 			*m_paramInvert = v;
 		}
 	}
+}
+
+//
+// GUI
+//
+
+juce::AudioProcessorEditor * SuperSeparator::createEditor()
+{
+	return new Editor(this);
 }
