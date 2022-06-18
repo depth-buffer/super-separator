@@ -64,7 +64,10 @@ class InstanceManager
 		//   thread destroys a follower during manipulation
 		// - the processor destructor to take the manager lock
 
-		[[nodiscard]] std::unique_lock<std::mutex> lock();
+		[[nodiscard]] std::unique_lock<std::mutex> lock()
+		{
+			return std::unique_lock<std::mutex>(m_mutex);
+		}
 
 	private:
 		InstanceManager() = default;
@@ -73,4 +76,5 @@ class InstanceManager
 		static InstanceManager m_singleton;
 
 		std::map<juce::Uuid, Remote *> m_instances;
+		std::mutex m_mutex;
 };

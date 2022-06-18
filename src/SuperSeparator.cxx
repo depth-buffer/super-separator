@@ -17,6 +17,7 @@
 #include <sstream>
 #endif
 
+#include "DebugLog.h"
 #include "Editor.h"
 #include "InstanceManager.h"
 #include "SuperSeparator.h"
@@ -48,7 +49,7 @@ namespace
 				juce::String d{ParamType::getParameterID()};
 				d += " param valueChanged: ";
 				d += newValue;
-				m_proc->debugLog(d);
+				DebugLog::log(d);
 #endif
 				m_proc->getChangeBroadcaster().sendChangeMessage();
 			}
@@ -70,17 +71,6 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 		.withInput("Input", juce::AudioChannelSet::stereo())
 		.withInput("Sidechain", juce::AudioChannelSet::stereo())
 		.withOutput("Output", juce::AudioChannelSet::stereo())),
-#ifdef SUPSEP_LOGGING
-	m_logger(juce::FileLogger::createDateStampedLogger(
-				juce::String(ProjectInfo::companyName) + '/'
-					+ ProjectInfo::projectName,
-				juce::String(ProjectInfo::versionString).replace(".","_")
-					+ '-',
-				".txt",
-				juce::String(ProjectInfo::projectName) + ' '
-					+ ProjectInfo::versionString)),
-	m_firstLog(true),
-#endif
 	m_floatDelayLine(5760), m_doubleDelayLine(5760),
 	// 5760 = 15 * 384, i.e. enough samples to go up to 15ms delay at
 	// 384kHz. Should be enough for anyone, right...?
@@ -90,10 +80,6 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 			(this, "invert", "Invert",
 			 juce::StringArray{"Secondary", "Primary"}, 0))
 {
-#ifdef SUPSEP_LOGGING
-	juce::Logger::setCurrentLogger(m_logger.get());
-#endif
-
 	// TODO: Future parameters?
 	// Per-channel delay gain
 	// Dry/wet (instance-linked)
@@ -106,10 +92,10 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	addParameter(m_paramInvert);
 
 #ifdef SUPSEP_LOGGING
-	debugLog(juce::String("Instance UUID: ") + m_uuid.toDashedString());
+	DebugLog::log(juce::String("Instance UUID: ") + m_uuid.toDashedString());
 	std::ostringstream oss;
 	oss << "Instance manager: " << std::ios::hex << InstanceManager::get();
-	debugLog(oss.str());
+	DebugLog::log(oss.str());
 #endif
 
 	// TODO Pass Remote's pointer
@@ -119,30 +105,12 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 SuperSeparator::~SuperSeparator()
 {
 #ifdef SUPSEP_LOGGING
-	juce::Logger::setCurrentLogger(nullptr);
+	DebugLog::log(juce::String("Destroying instance UUID ")
+			+ m_uuid.toDashedString());
 #endif
 
 	InstanceManager::get()->unregisterInstance(m_uuid);
 }
-
-//
-// Utility functions
-//
-
-#ifdef SUPSEP_LOGGING
-void SuperSeparator::debugLog(juce::String const & msg, bool reset)
-{
-	if (m_firstLog || reset)
-	{
-		m_logger->logMessage(
-				juce::Time::getCurrentTime().formatted("%Y%m%d %H:%M:%S ")
-				+ msg);
-		m_firstLog = false;
-	}
-	if (reset)
-		m_firstLog = true;
-}
-#endif
 
 //
 // Setup & processing
@@ -152,7 +120,8 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 		int maximumExpectedSamplesPerBlock)
 {
 #ifdef SUPSEP_LOGGING
-	debugLog(juce::String("prepareToPlay: ") + juce::String(sampleRate) + ' '
+	DebugLog::log(juce::String("prepareToPlay: ")
+			+ juce::String(sampleRate) + ' '
 			+ juce::String(maximumExpectedSamplesPerBlock));
 #endif
 
@@ -174,7 +143,7 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 void SuperSeparator::releaseResources()
 {
 #ifdef SUPSEP_LOGGING
-	debugLog("releaseResources");
+	DebugLog::log("releaseResources");
 #endif
 }
 
@@ -236,7 +205,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<float> & buffer,
 	juce::String d("processBlock<float>: ");
 	d += buffer.getNumSamples();
 	d += " samples";
-	debugLog(d, false);
+	DebugLog::log(d, false);
 #endif
 	processBlock(buffer, m_floatDelayLine);
 }
@@ -248,7 +217,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<double> & buffer,
 	juce::String d("processBlock<double>: ");
 	d += buffer.getNumSamples();
 	d += " samples";
-	debugLog(d, false);
+	DebugLog::log(d, false);
 #endif
 	processBlock(buffer, m_doubleDelayLine);
 }
@@ -285,8 +254,8 @@ void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
 	copyXmlToBinary(settings, destData);
 
 #ifdef SUPSEP_LOGGING
-	debugLog(juce::String("getStateInformation:\n---\n") + settings.toString()
-			+ juce::String("---"));
+	DebugLog::log(juce::String("getStateInformation:\n---\n")
+			+ settings.toString() + juce::String("---"));
 #endif
 }
 
@@ -296,8 +265,8 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 	std::unique_ptr<juce::XmlElement> settings{getXmlFromBinary(data, size)};
 
 #ifdef SUPSEP_LOGGING
-	debugLog(juce::String("setStateInformation:\n---\n") + settings->toString()
-			+ juce::String("---"));
+	DebugLog::log(juce::String("setStateInformation:\n---\n")
+			+ settings->toString() + juce::String("---"));
 #endif
 
 	// Check settings version. If unsupported, just leave everything at default
@@ -306,7 +275,7 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 #ifdef SUPSEP_LOGGING
 		juce::String d("Unsupported settings version: ");
 		d += settings->getIntAttribute("version");
-		debugLog(d);
+		DebugLog::log(d);
 #endif
 		return;
 	}

@@ -136,21 +136,8 @@ class SuperSeparator : public juce::AudioProcessor
 		void getStateInformation(juce::MemoryBlock & destData) override;
 		void setStateInformation(void const * data, int size) override;
 
-		//
-		// Debugging
-		//
-
-#ifdef SUPSEP_LOGGING
-		void debugLog(juce::String const & msg, bool reset = true);
-#endif
-
 	private:
 	    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SuperSeparator)
-
-#ifdef SUPSEP_LOGGING
-		std::unique_ptr<juce::FileLogger> m_logger;
-		bool m_firstLog;
-#endif
 
 		juce::Uuid m_uuid;
 

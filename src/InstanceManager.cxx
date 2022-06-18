@@ -17,16 +17,6 @@
 
 InstanceManager InstanceManager::m_singleton;
 
-namespace
-{
-	std::mutex p_mutex;
-}
-
-std::unique_lock<std::mutex> InstanceManager::lock()
-{
-	return std::unique_lock<std::mutex>(p_mutex);
-}
-
 void InstanceManager::registerInstance(juce::Uuid const & name,
 		Remote * remote)
 {

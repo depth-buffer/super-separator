@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include "DebugLog.h"
 #include "Editor.h"
 #include "SuperSeparator.h"
 
@@ -27,7 +28,7 @@ Editor::Editor(SuperSeparator * owner) : juce::AudioProcessorEditor(owner),
 			juce::Slider::TextBoxRight)
 {
 #ifdef SUPSEP_LOGGING
-	owner->debugLog("Constructing editor");
+	DebugLog::log("Constructing editor");
 #endif
 
 	// TODO Label that converts samples to milliseconds based on current sample
@@ -69,7 +70,7 @@ Editor::~Editor()
 	auto ss = reinterpret_cast<SuperSeparator *>(&processor);
 
 #ifdef SUPSEP_LOGGING
-	ss->debugLog("Destroying editor");
+	DebugLog::log("Destroying editor");
 #endif
 
 	ss->getChangeBroadcaster().removeChangeListener(&m_pluginListener);
