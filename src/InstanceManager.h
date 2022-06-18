@@ -16,11 +16,13 @@
 #pragma once
 
 #include <map>
-#include <string>
+#include <mutex>
+
+#include <JuceHeader.h>
 
 // Forward declaration of interface class used by a leader plugin to affect
 // parameter changes on a follower
-class RemoteSuperSeparator;
+class Remote;
 
 // Singleton class for managing instance linking & cross-instance parameter
 // change notifications. Just makes use of simple global variables and the fact
@@ -36,21 +38,23 @@ class InstanceManager
 		InstanceManager & operator=(InstanceManager &&) = delete;
 
 		// Get the singleton pointer
-		static InstanceManager * get();
+		static InstanceManager * get()
+		{
+			return &m_singleton;
+		}
 
 		// Grab a copy of the current list of known plugin instances
-		std::map<std::string, RemoteSuperSeparator *> instances();
+		std::map<juce::Uuid, Remote *> instances();
 
 		// Plugin instances should register/unregister themselves upon creation
-		void registerInstance(std::string const & name,
-				RemoteSuperSeparator * interface);
-		void unregisterInstance(std::string const & name);
+		void registerInstance(juce::Uuid const & uuid, Remote * remote);
+		void unregisterInstance(juce::Uuid const & uuid);
 
-		// TODO I don't know for certain that some VST hosts don't have
-		// multiple GUI and audio threads, so all communication between
-		// instances should be done with the manager lock held (shouldn't be
-		// a performance problem as it's really not intended to have its
-		// parameters tweaked except when scanning for good delay values).
+		// I don't know for certain that some VST hosts don't have multiple
+		// GUI and audio threads, so all communication between instances should
+		// be done with the manager lock held (shouldn't be a performance
+		// problem as it's really not intended to have its parameters tweaked
+		// except when scanning for good delay values).
 		// To that end, we need:
 		// - a scoped instance manager lock guard (and method for creating one)
 		// - the instance manager to (with lock held) null out the follower
@@ -60,11 +64,13 @@ class InstanceManager
 		//   thread destroys a follower during manipulation
 		// - the processor destructor to take the manager lock
 
+		[[nodiscard]] std::unique_lock<std::mutex> lock();
+
 	private:
 		InstanceManager() = default;
 		~InstanceManager() = default;
 
 		static InstanceManager m_singleton;
 
-		std::map<std::string, RemoteSuperSeparator *> m_instances;
+		std::map<juce::Uuid, Remote *> m_instances;
 };

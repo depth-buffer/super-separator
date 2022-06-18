@@ -133,7 +133,6 @@ class SuperSeparator : public juce::AudioProcessor
 		// State loading/saving
 		//
 
-		// TODO
 		void getStateInformation(juce::MemoryBlock & destData) override;
 		void setStateInformation(void const * data, int size) override;
 

@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <mutex>
-
 #include "InstanceManager.h"
 
 InstanceManager InstanceManager::m_singleton;
@@ -24,7 +22,25 @@ namespace
 	std::mutex p_mutex;
 }
 
-InstanceManager * InstanceManager::get()
+std::unique_lock<std::mutex> InstanceManager::lock()
 {
-	return &m_singleton;
+	return std::unique_lock<std::mutex>(p_mutex);
+}
+
+void InstanceManager::registerInstance(juce::Uuid const & name,
+		Remote * remote)
+{
+	auto l = lock();
+	m_instances.emplace(name, remote);
+	// TODO Look up pending "take ownership of" requests, and if there is
+	// another instance waiting to take ownership of this one, provide it
+	// with the Remote's pointer
+}
+
+void InstanceManager::unregisterInstance(juce::Uuid const & name)
+{
+	auto l = lock();
+	m_instances.erase(name);
+	// TODO Look up whether this instance has a leader, and if so, null out its
+	// Remote pointer
 }

@@ -111,6 +111,9 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	oss << "Instance manager: " << std::ios::hex << InstanceManager::get();
 	debugLog(oss.str());
 #endif
+
+	// TODO Pass Remote's pointer
+	InstanceManager::get()->registerInstance(m_uuid, nullptr);
 }
 
 SuperSeparator::~SuperSeparator()
@@ -118,6 +121,8 @@ SuperSeparator::~SuperSeparator()
 #ifdef SUPSEP_LOGGING
 	juce::Logger::setCurrentLogger(nullptr);
 #endif
+
+	InstanceManager::get()->unregisterInstance(m_uuid);
 }
 
 //
@@ -272,7 +277,9 @@ void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
 	invert->setAttribute("channel", m_paramInvert->getIndex());
 	settings.addChildElement(invert.release());
 
-	// TODO Save instance UUID so leaders can find us, if we are a follower
+	// Instance UUID
+	std::unique_ptr<juce::XmlElement> uuid{new juce::XmlElement("uuid")};
+	uuid->setAttribute("uuid", m_uuid.toString());
 
 	// Serialise & copy to memory block
 	copyXmlToBinary(settings, destData);
@@ -319,7 +326,18 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 			int v = e->getIntAttribute("channel", m_paramInvert->getIndex());
 			*m_paramInvert = v;
 		}
-		// TODO Load instance UUID so leaders can find us, if we are a follower
+		else if (e->getTagName() == "uuid")
+		{
+			juce::Uuid old{m_uuid};
+			juce::String v = e->getStringAttribute("uuid", m_uuid.toString());
+			m_uuid = v;
+			if (old != m_uuid)
+			{
+				InstanceManager::get()->unregisterInstance(old);
+				// TODO Pass Remote's pointer
+				InstanceManager::get()->registerInstance(m_uuid, nullptr);
+			}
+		}
 	}
 }
 
