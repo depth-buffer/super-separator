@@ -20,6 +20,7 @@
 #include "DebugLog.h"
 #include "Editor.h"
 #include "InstanceManager.h"
+#include "Remote.h"
 #include "SuperSeparator.h"
 
 namespace
@@ -100,8 +101,10 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	DebugLog::log(m_logname, oss.str());
 #endif
 
-	// TODO Pass Remote's pointer
-	InstanceManager::get()->registerInstance(m_uuid, nullptr);
+	m_remote.reset(new Remote(this));
+	bool result =
+		InstanceManager::get()->registerInstance(m_uuid, m_remote.get());
+	jassert(result);
 }
 
 SuperSeparator::~SuperSeparator()
@@ -111,7 +114,7 @@ SuperSeparator::~SuperSeparator()
 			+ m_uuid.toDashedString());
 #endif
 
-	InstanceManager::get()->unregisterInstance(m_uuid);
+	InstanceManager::get()->unregisterInstance(m_uuid, m_remote.get());
 }
 
 //
@@ -251,6 +254,7 @@ void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
 	// Instance UUID
 	std::unique_ptr<juce::XmlElement> uuid{new juce::XmlElement("uuid")};
 	uuid->setAttribute("uuid", m_uuid.toString());
+	settings.addChildElement(uuid.release());
 
 	// Serialise & copy to memory block
 	copyXmlToBinary(settings, destData);
@@ -299,21 +303,37 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 		}
 		else if (e->getTagName() == "uuid")
 		{
-			juce::Uuid old{m_uuid};
 			juce::String v = e->getStringAttribute("uuid", m_uuid.toString());
-			m_uuid = v;
-#ifdef SUPSEP_LOGGING
-			DebugLog::log(m_logname,
-					juce::String("Old UUID: ") + m_uuid.toDashedString());
-			m_logname = juce::String::toHexString(m_uuid.hash());
-			DebugLog::log(m_logname,
-					juce::String("New UUID: ") + m_uuid.toDashedString());
-#endif
-			if (old != m_uuid)
+			if (v != m_uuid.toString())
 			{
-				InstanceManager::get()->unregisterInstance(old);
-				// TODO Pass Remote's pointer
-				InstanceManager::get()->registerInstance(m_uuid, nullptr);
+				juce::Uuid old{m_uuid};
+				m_uuid = v;
+#ifdef SUPSEP_LOGGING
+				DebugLog::log(m_logname,
+						juce::String("Old UUID: ") + old.toDashedString());
+				m_logname = juce::String::toHexString(m_uuid.hash());
+				DebugLog::log(m_logname,
+						juce::String("New UUID: ") + m_uuid.toDashedString());
+#endif
+				InstanceManager::get()->unregisterInstance(old, &(*m_remote));
+				m_remote.reset(new Remote(this));
+				bool result = InstanceManager::get()->registerInstance(m_uuid,
+						&(*m_remote));
+				if (!result)
+				{
+					// Duplicate UUID - possible plugin cut/copy & paste in the
+					// VST host leading to two copies of the same state info.
+					// Keep our original UUID after all.
+					m_uuid =  old;
+#ifdef SUPSEP_LOGGING
+					m_logname = juce::String::toHexString(m_uuid.hash());
+					DebugLog::log(m_logname,
+							"Registration failed; going back to old UUID");
+#endif
+					m_remote.reset(new Remote(this));
+					result = InstanceManager::get()->registerInstance(m_uuid,
+						&(*m_remote));
+				}
 			}
 		}
 	}

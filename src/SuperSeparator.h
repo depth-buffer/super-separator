@@ -22,6 +22,10 @@
 // Forward declaration of plugin editor UI
 class Editor;
 
+// Forward declaration of interface class used by a leader plugin to affect
+// parameter changes on a follower
+class Remote;
+
 // Main plugin instance "entry point" class & audio processing callbacks
 class SuperSeparator : public juce::AudioProcessor
 {
@@ -164,4 +168,7 @@ class SuperSeparator : public juce::AudioProcessor
 
 		template<typename SampleType, typename DelayType> void processBlock(
 				juce::AudioBuffer<SampleType> & buffer, DelayType & delayLine);
+
+		friend class Remote;
+		std::unique_ptr<Remote> m_remote;
 };

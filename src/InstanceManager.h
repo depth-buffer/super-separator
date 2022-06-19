@@ -44,11 +44,19 @@ class InstanceManager
 		}
 
 		// Grab a copy of the current list of known plugin instances
+		// TODO This will primarily be used to render the UI - to ensure there
+		// are no gnarly race conditions between instances coming/going,
+		// notifications reaching editors, and editors updating their combo
+		// boxes, this should return a list of labels & enabled/disabled states
+		// directly, not pointers to Remotes
 		std::map<juce::Uuid, Remote *> instances();
 
-		// Plugin instances should register/unregister themselves upon creation
-		void registerInstance(juce::Uuid const & uuid, Remote * remote);
-		void unregisterInstance(juce::Uuid const & uuid);
+		// Plugin instances should register/unregister themselves upon
+		// creation. Registration may fail if two instances exist with the same
+		// configuration passed to setStateInformation (e.g. plugin copy &
+		// paste in the host).
+		bool registerInstance(juce::Uuid const & uuid, Remote * remote);
+		void unregisterInstance(juce::Uuid const & uuid, Remote * remote);
 
 		// I don't know for certain that some VST hosts don't have multiple
 		// GUI and audio threads, so all communication between instances should
@@ -77,4 +85,6 @@ class InstanceManager
 
 		std::map<juce::Uuid, Remote *> m_instances;
 		std::mutex m_mutex;
+
+		juce::ChangeBroadcaster m_instancesChanged;
 };
