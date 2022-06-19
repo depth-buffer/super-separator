@@ -17,7 +17,8 @@
 
 DebugLog DebugLog::m_singleton;
 
-void DebugLog::pLog(juce::String const & msg, bool reset)
+void DebugLog::pLog(juce::String const & name, juce::String const & msg,
+		bool reset)
 {
 	std::unique_lock<std::mutex> l(m_mutex);
 
@@ -39,7 +40,7 @@ void DebugLog::pLog(juce::String const & msg, bool reset)
 	{
 		m_logger->logMessage(
 				juce::Time::getCurrentTime().formatted("%Y%m%d %H:%M:%S ")
-				+ msg);
+				+ name + " " + msg);
 		m_firstLog = false;
 	}
 	if (reset)
@@ -50,7 +51,7 @@ DebugLog::~DebugLog()
 {
 	if (!m_init)
 	{
-		log("Destroying logger");
+		log("logger", "Destroying logger");
 		juce::Logger::setCurrentLogger(nullptr);
 	}
 }

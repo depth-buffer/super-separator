@@ -49,7 +49,7 @@ namespace
 				juce::String d{ParamType::getParameterID()};
 				d += " param valueChanged: ";
 				d += newValue;
-				DebugLog::log(d);
+				DebugLog::log(m_proc->getLogName(), d);
 #endif
 				m_proc->getChangeBroadcaster().sendChangeMessage();
 			}
@@ -92,10 +92,12 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 	addParameter(m_paramInvert);
 
 #ifdef SUPSEP_LOGGING
-	DebugLog::log(juce::String("Instance UUID: ") + m_uuid.toDashedString());
+	m_logname = juce::String::toHexString(m_uuid.hash());
+	DebugLog::log(m_logname,
+			juce::String("Instance UUID: ") + m_uuid.toDashedString());
 	std::ostringstream oss;
 	oss << "Instance manager: " << std::ios::hex << InstanceManager::get();
-	DebugLog::log(oss.str());
+	DebugLog::log(m_logname, oss.str());
 #endif
 
 	// TODO Pass Remote's pointer
@@ -105,7 +107,7 @@ SuperSeparator::SuperSeparator() : juce::AudioProcessor(
 SuperSeparator::~SuperSeparator()
 {
 #ifdef SUPSEP_LOGGING
-	DebugLog::log(juce::String("Destroying instance UUID ")
+	DebugLog::log(m_logname, juce::String("Destroying instance UUID ")
 			+ m_uuid.toDashedString());
 #endif
 
@@ -120,7 +122,7 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 		int maximumExpectedSamplesPerBlock)
 {
 #ifdef SUPSEP_LOGGING
-	DebugLog::log(juce::String("prepareToPlay: ")
+	DebugLog::log(m_logname, juce::String("prepareToPlay: ")
 			+ juce::String(sampleRate) + ' '
 			+ juce::String(maximumExpectedSamplesPerBlock));
 #endif
@@ -143,7 +145,7 @@ void SuperSeparator::prepareToPlay(double sampleRate,
 void SuperSeparator::releaseResources()
 {
 #ifdef SUPSEP_LOGGING
-	DebugLog::log("releaseResources");
+	DebugLog::log(m_logname, "releaseResources");
 #endif
 }
 
@@ -205,7 +207,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<float> & buffer,
 	juce::String d("processBlock<float>: ");
 	d += buffer.getNumSamples();
 	d += " samples";
-	DebugLog::log(d, false);
+	DebugLog::log(m_logname, d, false);
 #endif
 	processBlock(buffer, m_floatDelayLine);
 }
@@ -217,7 +219,7 @@ void SuperSeparator::processBlock(juce::AudioBuffer<double> & buffer,
 	juce::String d("processBlock<double>: ");
 	d += buffer.getNumSamples();
 	d += " samples";
-	DebugLog::log(d, false);
+	DebugLog::log(m_logname, d, false);
 #endif
 	processBlock(buffer, m_doubleDelayLine);
 }
@@ -254,7 +256,7 @@ void SuperSeparator::getStateInformation(juce::MemoryBlock & destData)
 	copyXmlToBinary(settings, destData);
 
 #ifdef SUPSEP_LOGGING
-	DebugLog::log(juce::String("getStateInformation:\n---\n")
+	DebugLog::log(m_logname, juce::String("getStateInformation:\n---\n")
 			+ settings.toString() + juce::String("---"));
 #endif
 }
@@ -265,7 +267,7 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 	std::unique_ptr<juce::XmlElement> settings{getXmlFromBinary(data, size)};
 
 #ifdef SUPSEP_LOGGING
-	DebugLog::log(juce::String("setStateInformation:\n---\n")
+	DebugLog::log(m_logname, juce::String("setStateInformation:\n---\n")
 			+ settings->toString() + juce::String("---"));
 #endif
 
@@ -275,7 +277,7 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 #ifdef SUPSEP_LOGGING
 		juce::String d("Unsupported settings version: ");
 		d += settings->getIntAttribute("version");
-		DebugLog::log(d);
+		DebugLog::log(m_logname, d);
 #endif
 		return;
 	}
@@ -300,6 +302,13 @@ void SuperSeparator::setStateInformation(void const * data, int size)
 			juce::Uuid old{m_uuid};
 			juce::String v = e->getStringAttribute("uuid", m_uuid.toString());
 			m_uuid = v;
+#ifdef SUPSEP_LOGGING
+			DebugLog::log(m_logname,
+					juce::String("Old UUID: ") + m_uuid.toDashedString());
+			m_logname = juce::String::toHexString(m_uuid.hash());
+			DebugLog::log(m_logname,
+					juce::String("New UUID: ") + m_uuid.toDashedString());
+#endif
 			if (old != m_uuid)
 			{
 				InstanceManager::get()->unregisterInstance(old);

@@ -28,7 +28,8 @@ Editor::Editor(SuperSeparator * owner) : juce::AudioProcessorEditor(owner),
 			juce::Slider::TextBoxRight)
 {
 #ifdef SUPSEP_LOGGING
-	DebugLog::log("Constructing editor");
+	m_logname = owner->getLogName() + "-editor";
+	DebugLog::log(m_logname, "Constructing editor");
 #endif
 
 	// TODO Label that converts samples to milliseconds based on current sample
@@ -70,7 +71,7 @@ Editor::~Editor()
 	auto ss = reinterpret_cast<SuperSeparator *>(&processor);
 
 #ifdef SUPSEP_LOGGING
-	DebugLog::log("Destroying editor");
+	DebugLog::log(m_logname, "Destroying editor");
 #endif
 
 	ss->getChangeBroadcaster().removeChangeListener(&m_pluginListener);

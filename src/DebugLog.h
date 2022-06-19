@@ -33,9 +33,10 @@ class DebugLog
 		// first such message will actually be recorded; this allows e.g.
 		// recording a message on first entering the processing callback in
 		// the main audio thread without spamming it during rendering.
-		static void log(juce::String const & msg, bool reset = true)
+		static void log(juce::String const & name, juce::String const & msg,
+				bool reset = true)
 		{
-			m_singleton.pLog(msg, reset);
+			m_singleton.pLog(name, msg, reset);
 		}
 
 	private:
@@ -49,5 +50,6 @@ class DebugLog
 		bool m_init = true;
 		bool m_firstLog = false;
 
-		void pLog(juce::String const & msg, bool reset);
+		void pLog(juce::String const & name, juce::String const & msg,
+				bool reset);
 };

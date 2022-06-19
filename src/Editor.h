@@ -31,6 +31,10 @@ class Editor : public juce::AudioProcessorEditor
 	private:
 	    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Editor)
 
+#ifdef SUPSEP_LOGGING
+		juce::String m_logname;
+#endif
+
 		// Move inherited public data members to private; we don't want
 		// stuff messing with them unnecessarily
 		using juce::AudioProcessorEditor::processor;

@@ -136,10 +136,21 @@ class SuperSeparator : public juce::AudioProcessor
 		void getStateInformation(juce::MemoryBlock & destData) override;
 		void setStateInformation(void const * data, int size) override;
 
+#ifdef SUPSEP_LOGGING
+		// Get a shortened form of UUID suitable for use as name param in log
+		juce::String const & getLogName() const
+		{
+			return m_logname;
+		}
+#endif
+
 	private:
 	    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SuperSeparator)
 
 		juce::Uuid m_uuid;
+#ifdef SUPSEP_LOGGING
+		juce::String m_logname;
+#endif
 
 		juce::dsp::DelayLine<float,
 			juce::dsp::DelayLineInterpolationTypes::Linear> m_floatDelayLine;
